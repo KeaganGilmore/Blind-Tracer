@@ -53,6 +53,8 @@ function love.load()
 	local statePath = "src/states"
 	local initState = "start"
 
+	love.graphics.setDefaultFilter("nearest", "nearest")
+
 	_G.States = {}
 	for _, state in ipairs(love.filesystem.getDirectoryItems(statePath)) do
 		local module = state:match("(.+)%.lua$") or state
