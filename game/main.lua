@@ -2,7 +2,7 @@ local IS_DEBUG = os.getenv("LOCAL_LUA_DEBUGGER_VSCODE") == "1" and arg[2] == "de
 _G.PROF_CAPTURE = IS_DEBUG and arg[3] == "profile"
 
 -- Load core libraries
-_G.gamestate = require "lib.hump.gamestate"
+_G.Gamestate = require("lib.hump.gamestate")
 
 -- Set up debugging
 if IS_DEBUG then
@@ -14,7 +14,7 @@ end
 
 -- Set up profiling
 if PROF_CAPTURE then
-	_G.prof = require "lib.jprof"
+	_G.prof = require("lib.jprof")
 
 	-- Override love.run for frame profiling
 	local original_run = love.run
@@ -38,7 +38,7 @@ if PROF_CAPTURE then
 	for _, f in ipairs(all_callbacks) do
 		love[f] = function(...)
 			prof.push(f)
-			local results = { gamestate[f](...) }
+			local results = { Gamestate[f](...) }
 			prof.pop(f)
 			return unpack(results)
 		end
@@ -50,20 +50,20 @@ end
 -- Game initialization
 function love.load()
 	-- Load all game states
-	local states_path = "src/states"
-	local init_state = "start"
+	local statePath = "src/states"
+	local initState = "start"
 
-	_G.states = {}
-	for _, state in ipairs(love.filesystem.getDirectoryItems(states_path)) do
+	_G.States = {}
+	for _, state in ipairs(love.filesystem.getDirectoryItems(statePath)) do
 		local module = state:match("(.+)%.lua$") or state
-		states[module] = require(states_path .. "." .. module)
+		States[module] = require(statePath .. "." .. module)
 	end
 
 	-- Initialize the first state
-	gamestate.switch(states[init_state])
+	Gamestate.switch(States[initState])
 
 	-- Register events if not using profiling
 	if not PROF_CAPTURE then
-		gamestate.registerEvents()
+		Gamestate.registerEvents()
 	end
 end
