@@ -63,6 +63,8 @@ You can open the project in workspace mode in several ways:
 
 #### VS Code Extensions
 
+When the workspace is opened in VS Code, any **required** or **recommended extensions** will be automatically suggested via a prompt. These include:
+
 * **Required**:
 
   * `tomblind.local-lua-debugger-vscode` (Local Lua Debugger)
