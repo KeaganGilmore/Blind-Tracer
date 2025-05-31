@@ -12,13 +12,6 @@ Maze.static.tileLookup = require(Path .. ".tile_map")
 Maze.static.tileQuads  = {}
 Maze.static.tileSize   = tileSize
 
-local DIRS             = {
-	{ dr = -1, dc = 0,  bit = 1 },
-	{ dr = 1,  dc = 0,  bit = 4 },
-	{ dr = 0,  dc = -1, bit = 8 },
-	{ dr = 0,  dc = 1,  bit = 2 },
-}
-
 -- Precompute quads from the tile map
 do
 	local sheetW, sheetH = Maze.static.tileSheet:getDimensions()
@@ -34,36 +27,9 @@ function Maze:initialize(rows, cols, alg, seed)
 	self.rows = rows
 	self.cols = cols
 	self.seed = seed
-
 	local generator = Maze.algs[alg or "recursiveBacktracking"]
 	assert(generator, "Invalid algorithm: " .. tostring(alg))
-
-	self.grid = generator(rows, cols, seed)
-	self:generateTileMap()
-end
-
-function Maze:generateTileMap()
-	self.tileMap = {}
-
-	for r = 1, self.rows do
-		self.tileMap[r] = {}
-		for c = 1, self.cols do
-			self.tileMap[r][c] = 0
-		end
-	end
-
-	for r = 1, self.rows do
-		for c = 1, self.cols do
-			if self.grid[r][c] == 1 then
-				for _, dir in ipairs(DIRS) do
-					local nr, nc = r + dir.dr, c + dir.dc
-					if self.grid[nr] and self.grid[nr][nc] == 1 then
-						self.tileMap[r][c] = self.tileMap[r][c] + dir.bit
-					end
-				end
-			end
-		end
-	end
+	self.grid, self.path, self.tileMap = generator(rows, cols, seed)
 end
 
 -- Print the maze to console
@@ -78,11 +44,11 @@ function Maze:print()
 	end
 end
 
--- Draw the maze using quads
 function Maze:draw()
 	local scale = 0.3
 	local tileSizeScaled = tileSize * scale
 
+	-- Draw maze tiles
 	for r = 1, self.rows do
 		for c = 1, self.cols do
 			local quad = Maze.static.tileQuads[self.tileMap[r][c]]
@@ -96,6 +62,25 @@ function Maze:draw()
 				)
 			end
 		end
+	end
+
+	-- Draw the longest path as a red line
+	if self.path and #self.path > 1 then
+		love.graphics.setColor(1, 0, 0, 0.8) -- Red, semi-transparent
+
+		for i = 1, #self.path - 1 do
+			local a = self.path[i]
+			local b = self.path[i + 1]
+
+			local ax = (a.x - 0.5) * tileSizeScaled
+			local ay = (a.y - 0.5) * tileSizeScaled
+			local bx = (b.x - 0.5) * tileSizeScaled
+			local by = (b.y - 0.5) * tileSizeScaled
+
+			love.graphics.line(ax, ay, bx, by)
+		end
+
+		love.graphics.setColor(1, 1, 1, 1) -- Reset color to white
 	end
 end
 
