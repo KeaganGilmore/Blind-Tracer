@@ -8,13 +8,14 @@ return function(rows, cols, seed)
 	if cols % 2 == 0 then cols = cols + 1 end
 
 	-- Initialise variables
-	local maze, tileMap, longestPath, currentPath = {}, {}, {}, {}
+	local maze, tileMap, longestPath, currentPath, pathGrid = {}, {}, {}, {}, {}
 
 	for y = 1, rows do
-		maze[y], tileMap[y] = {}, {}
+		maze[y], tileMap[y], pathGrid[y] = {}, {}, {}
 		for x = 1, cols do
 			maze[y][x] = 1
 			tileMap[y][x] = 0
+			pathGrid[y][x] = 0
 		end
 	end
 
@@ -43,6 +44,20 @@ return function(rows, cols, seed)
 
 	carve(2, 2)
 
+	-- Mark the longest path in the pathGrid, including corridors between rooms
+	for i = 1, #longestPath do
+		local point = longestPath[i]
+		pathGrid[point.y][point.x] = 1
+
+		-- Also mark the corridor to the next point
+		if i < #longestPath then
+			local nextPoint = longestPath[i + 1]
+			local midX = (point.x + nextPoint.x) / 2
+			local midY = (point.y + nextPoint.y) / 2
+			pathGrid[midY][midX] = 1
+		end
+	end
+
 	for r = 1, rows do
 		for c = 1, cols do
 			if maze[r][c] == 1 then
@@ -56,5 +71,5 @@ return function(rows, cols, seed)
 		end
 	end
 
-	return maze, longestPath, tileMap
+	return maze, pathGrid, tileMap
 end
