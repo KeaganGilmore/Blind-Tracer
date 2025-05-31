@@ -3,3 +3,4 @@ build_directory = "../builds"
 love_files = ["+*", "-*/.*"]
 love_version = "11.5"
 name = "Blind Tracer"
+icon_file = "resources/icon.png"
