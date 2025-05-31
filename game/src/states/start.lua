@@ -1,4 +1,4 @@
-local Maze = require("src.maze")
+local Maze = require("src.maze") -- Assuming 'src.maze' exists and provides a Maze class
 
 local Start = {}
 
@@ -16,15 +16,18 @@ function Start:resizeMaze()
 end
 
 function Start:update(dt)
-
+	-- No update logic needed for this simple maze display
 end
 
 function Start:draw()
+	love.graphics.setShader(self.shader)
 	self.maze:draw()
+	love.graphics.setShader()
 end
 
 function Start:mousepressed()
 	-- self.maze = Maze(21, 21)
+	-- self:resizeMaze()
 end
 
 function Start:resize(w, h)

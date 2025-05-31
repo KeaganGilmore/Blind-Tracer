@@ -1,11 +1,12 @@
 local Class            = require("lib.middleclass")
 local Maze             = Class("Maze")
-local Path             = ...
+local Path             = ... .. "."
 
 -- Static configuration
-Maze.static.algs       = { recursiveBacktracking = require(Path .. ".algs.recursive_backtracking") }
-Maze.static.tileSheet  = love.graphics.newImage(Path:gsub("%.", "/") .. "/tile_sheet.png")
-Maze.static.tileLookup = require(Path .. ".tile_map")
+Maze.static.algs       = { recursiveBacktracking = require(Path .. "algs.recursive_backtracking") }
+Maze.static.tileSheet  = love.graphics.newImage(Path:gsub("%.", "/") .. "tile_sheet.png")
+Maze.static.shaderFunc = require(Path .. "palette_shader")
+Maze.static.tileLookup = require(Path .. "tile_map")
 Maze.static.tileSize   = 128
 Maze.static.tileQuads  = {}
 
@@ -23,21 +24,40 @@ end
 function Maze:initialize(rows, cols, alg, seed)
 	local generator = Maze.algs[alg or "recursiveBacktracking"]
 	assert(generator, "Invalid algorithm: " .. tostring(alg))
-
 	self.rows = rows
 	self.cols = cols
 	self.seed = seed
 	self.grid, self.path, self.tileMap = generator(rows, cols, seed)
-
 	self.displayScale = 0.3
 	self.displayTileSize = nil
 	self.x = 0
 	self.y = 0
+	self.canvas = love.graphics.newCanvas(self.cols * Maze.tileSize, self.rows * Maze.tileSize)
+	self:renderToCanvas()
 end
 
 function Maze:setPosition(x, y)
 	self.x = x or 0
 	self.y = y or 0
+end
+
+-- Render the maze to the canvas (called once)
+function Maze:renderToCanvas()
+	love.graphics.setCanvas(self.canvas)
+	love.graphics.clear()
+	for r = 1, self.rows do
+		for c = 1, self.cols do
+			local quad = Maze.tileQuads[self.tileMap[r][c]]
+			if quad then love.graphics.draw(Maze.tileSheet, quad, (c - 1) * Maze.tileSize, (r - 1) * Maze.tileSize) end
+			if self.path[r][c] == 1 then
+				love.graphics.setColor(1, 0, 0, 0.5)
+				love.graphics.rectangle("fill", (c - 1) * Maze.tileSize, (r - 1) * Maze.tileSize, Maze.tileSize,
+					Maze.tileSize)
+				love.graphics.setColor(1, 1, 1, 1)
+			end
+		end
+	end
+	love.graphics.setCanvas()
 end
 
 function Maze:getPosition()
@@ -83,26 +103,7 @@ function Maze:print()
 end
 
 function Maze:draw()
-	local scale = self.displayScale
-	love.graphics.push()
-	love.graphics.translate(self.x, self.y)
-	love.graphics.scale(scale, scale)
-	for r = 1, self.rows do
-		for c = 1, self.cols do
-			local quad = Maze.tileQuads[self.tileMap[r][c]]
-			if quad then
-				love.graphics.draw(Maze.tileSheet, quad, (c - 1) * Maze.tileSize, (r - 1) * Maze.tileSize)
-			end
-
-			if self.path[r][c] == 1 then
-				love.graphics.setColor(1, 0, 0, 0.5) -- Red, semi-transparent
-				love.graphics.rectangle("fill", (c - 1) * Maze.tileSize, (r - 1) * Maze.tileSize, Maze.tileSize,
-					Maze.tileSize)
-				love.graphics.setColor(1, 1, 1, 1)
-			end
-		end
-	end
-	love.graphics.pop()
+	love.graphics.draw(self.canvas, self.x, self.y, 0, self.displayScale, self.displayScale)
 end
 
 return Maze
