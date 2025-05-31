@@ -141,5 +141,3 @@ This project is licensed under the **GNU General Public License v3.0 (GPL-3.0)**
 See the [LICENSE](./LICENSE) file for full details.
 
 ---
-
-Let me know if you'd like this exported to a file or converted to Markdown syntax directly.
