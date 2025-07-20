@@ -1,10 +1,15 @@
-local Maze = require("src.maze") -- Assuming 'src.maze' exists and provides a Maze class
+local Maze = require("src.maze")
 
 local Start = {}
 
 function Start:init()
+end
+
+function Start:enter()
+	-- Create a new maze every time the state is entered
 	self.maze = Maze(21, 21)
-	self.maze:setGridEnabled(true)
+	self.maze:setGridEnabled(false)
+	self.maze:setSelectionEnabled(true)
 	self:resizeMaze()
 end
 
@@ -17,18 +22,29 @@ function Start:resizeMaze()
 end
 
 function Start:update(dt)
-	-- No update logic needed for this simple maze display
-	self.maze:update()
+	if self.maze then -- Add safety check in case update is called before enter
+		self.maze:update()
+	end
 end
 
 function Start:draw()
-	love.graphics.setShader(self.shader)
-	self.maze:draw()
-	love.graphics.setShader()
+	if self.maze then -- Add safety check in case draw is called before enter
+		self.maze:draw()
+	end
 end
 
 function Start:resize(w, h)
-	self:resizeMaze()
+	if self.maze then -- Add safety check in case resize is called before enter
+		self:resizeMaze()
+	end
+end
+
+function Start:keypressed(key, scancode, isrepeat)
+	if key == "space" then
+		if self.maze and self.maze:isSelectionCorrectPath() then
+			Gamestate.switch(States["test"])
+		end
+	end
 end
 
 return Start

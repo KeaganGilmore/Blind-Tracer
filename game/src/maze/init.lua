@@ -24,22 +24,24 @@ end
 function Maze:initialize(rows, cols, alg, seed)
 	local generator = Maze.algs[alg or "recursiveBacktracking"]
 	assert(generator, "Invalid algorithm: " .. tostring(alg))
-	self.rows = rows
-	self.cols = cols
-	self.seed = seed
-	self.grid, self.path, self.tileMap = generator(rows, cols, seed)
-	self.displayScale = 0.3
-	self.displayTileSize = nil
-	self.x = 0
-	self.y = 0
-	self.canvas = love.graphics.newCanvas(self.cols * Maze.tileSize, self.rows * Maze.tileSize)
+	self.rows                                                        = rows
+	self.cols                                                        = cols
+	self.seed                                                        = seed
+	self.grid, self.path, self.tileMap, self.startTile, self.endTile = generator(rows, cols, seed)
+	self.displayScale                                                = 0.3
+	self.displayTileSize                                             = nil
+	self.x                                                           = 0
+	self.y                                                           = 0
+	self.canvas                                                      = love.graphics.newCanvas(self.cols * Maze.tileSize,
+		self.rows * Maze.tileSize)
 
 	-- Grid selection properties
-	self.gridEnabled = false
-	self.selectedCells = {}   -- Table to store multiple selected cells
-	self.isDragging = false
-	self.dragMode = "select"  -- Default mode is "select", toggles with right-click
-	self.wasRightPressed = false -- Track right mouse button state for edge detection
+	self.gridEnabled                                                 = false
+	self.selectionEnabled                                            = false
+	self.selectedCells                                               = {}    -- Table to store multiple selected cells
+	self.isDragging                                                  = false
+	self.dragMode                                                    = "select" -- Default mode is "select", toggles with right-click
+	self.wasRightPressed                                             = false -- Track right mouse button state for edge detection
 
 	self:renderToCanvas()
 end
@@ -56,6 +58,30 @@ end
 
 function Maze:isGridEnabled()
 	return self.gridEnabled
+end
+
+function Maze:setSelectionEnabled(enabled)
+	self.selectionEnabled = enabled
+end
+
+function Maze:isSelectionEnabled()
+	return self.selectionEnabled
+end
+
+-- Enable/disable the path visualization
+function Maze:setPathEnabled(enabled)
+	self.pathEnabled = enabled
+	self:renderToCanvas() -- Re-render canvas when path visibility changes
+end
+
+function Maze:isPathEnabled()
+	return self.pathEnabled
+end
+
+-- Toggle path visibility
+function Maze:togglePath()
+	self.pathEnabled = not self.pathEnabled
+	self:renderToCanvas() -- Re-render canvas when toggled
 end
 
 -- Toggle between select and deselect modes
@@ -105,7 +131,7 @@ end
 
 -- Update drag selection
 function Maze:update()
-	if not self.gridEnabled then return end
+	if not self.gridEnabled and not self.selectionEnabled then return end
 
 	local mouseX, mouseY = love.mouse.getPosition()
 	local isLeftPressed = love.mouse.isDown(1) -- Left mouse button
@@ -153,17 +179,34 @@ end
 function Maze:renderToCanvas()
 	love.graphics.setCanvas(self.canvas)
 	love.graphics.clear()
+
 	for r = 1, self.rows do
 		for c = 1, self.cols do
 			local quad = Maze.tileQuads[self.tileMap[r][c]]
 			if quad then love.graphics.draw(Maze.tileSheet, quad, (c - 1) * Maze.tileSize, (r - 1) * Maze.tileSize) end
-			if self.path[r][c] == 1 then
+			-- Only draw path if pathEnabled is true
+			if self.pathEnabled and self.path[r][c] == 1 then
 				love.graphics.setColor(1, 0, 0, 0.5)
 				love.graphics.rectangle("fill", (c - 1) * Maze.tileSize, (r - 1) * Maze.tileSize, Maze.tileSize,
 					Maze.tileSize)
 				love.graphics.setColor(1, 1, 1, 1)
 			end
 		end
+	end
+	-- Always draw start tile (green)
+	if self.startTile then
+		love.graphics.setColor(0, 1, 0, 0.7) -- Green with transparency
+		love.graphics.rectangle("fill", (self.startTile.x - 1) * Maze.tileSize, (self.startTile.y - 1) * Maze.tileSize,
+			Maze.tileSize, Maze.tileSize)
+		love.graphics.setColor(1, 1, 1, 1)
+	end
+
+	-- Always draw end tile (red)
+	if self.endTile then
+		love.graphics.setColor(1, 0, 0, 0.7) -- Red with transparency
+		love.graphics.rectangle("fill", (self.endTile.x - 1) * Maze.tileSize, (self.endTile.y - 1) * Maze.tileSize,
+			Maze.tileSize, Maze.tileSize)
+		love.graphics.setColor(1, 1, 1, 1)
 	end
 	love.graphics.setCanvas()
 end
@@ -215,7 +258,13 @@ function Maze:drawGrid()
 			love.graphics.rectangle("line", x, y, effectiveTileSize, effectiveTileSize)
 		end
 	end
+	-- Reset color
+	love.graphics.setColor(1, 1, 1, 1)
+end
 
+function Maze:drawSelectedCells()
+	if not self.selectionEnabled then return end
+	local effectiveTileSize = self:getEffectiveTileSize()
 	-- Draw selected cells
 	love.graphics.setColor(0, 1, 0, 0.5) -- Simple green
 	for key, cell in pairs(self.selectedCells) do
@@ -224,7 +273,6 @@ function Maze:drawGrid()
 			love.graphics.rectangle("fill", x, y, effectiveTileSize, effectiveTileSize)
 		end
 	end
-
 	-- Reset color
 	love.graphics.setColor(1, 1, 1, 1)
 end
@@ -244,6 +292,33 @@ end
 function Maze:draw()
 	love.graphics.draw(self.canvas, self.x, self.y, 0, self.displayScale, self.displayScale)
 	self:drawGrid()
+	self:drawSelectedCells()
+end
+
+-- Check if selected cells exactly match the path
+function Maze:isSelectionCorrectPath()
+	local pathCount = 0
+
+	-- Single pass: count path cells and verify each is selected
+	for r = 1, self.rows do
+		for c = 1, self.cols do
+			if self.path[r][c] == 1 then
+				pathCount = pathCount + 1
+				local cellKey = r .. "," .. c
+				if not self.selectedCells[cellKey] then
+					return false -- Path cell not selected
+				end
+			end
+		end
+	end
+
+	-- Check if any extra cells are selected
+	local selectedCount = 0
+	for _ in pairs(self.selectedCells) do
+		selectedCount = selectedCount + 1
+	end
+
+	return selectedCount == pathCount
 end
 
 return Maze

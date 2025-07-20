@@ -71,5 +71,9 @@ return function(rows, cols, seed)
 		end
 	end
 
-	return maze, pathGrid, tileMap
+	-- Get start and end tiles from the longest path
+	local startTile = longestPath[1]
+	local endTile = longestPath[#longestPath]
+
+	return maze, pathGrid, tileMap, startTile, endTile
 end
